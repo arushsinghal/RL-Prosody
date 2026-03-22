@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reinforcement-Learned Adaptive Prosody</title>
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --panel-bg: #18181b;
+            --panel-border: #27272a;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --radius: 8px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 15px;
+            background: -webkit-linear-gradient(0deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .abstract {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            padding: 30px;
+            margin-bottom: 40px;
+            font-size: 1.05rem;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        ul {
+            color: var(--text-secondary);
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .math {
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+            font-style: italic;
+            color: #cbd5e1;
+            background: #111;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--panel-border);
+        }
+
+        .cta-container {
+            text-align: center;
+            margin-top: 60px;
+            padding: 40px;
+            background: linear-gradient(180deg, var(--bg-color) 0%, var(--panel-bg) 100%);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: var(--text-primary);
+            color: var(--bg-color);
+            padding: 15px 35px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: transform 0.2s, opacity 0.2s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Reinforcement-Learned Adaptive Prosody</h1>
+            <div class="subtitle">Solving monotonic collapse in TTS through trajectory optimization.</div>
+        </div>
+
+        <div class="abstract">
+            <strong>Abstract:</strong> Current Text-to-Speech (TTS) models struggle to produce contextually rich, expressive prosody when trained purely via supervised reconstruction loss (MSE), inherently forcing parameters toward "average" geometric mean trajectories. We formulate prosody extraction—pitch offset, duration scaling, and energy variation—as a Reinforcement Learning MDP constraint problem. By aligning continuous-action distributions against highly correlated proxy rewards (<span class="math">R_{intelligibility}</span>, <span class="math">R_{naturalness}</span>), we mathematically prove that policy convergence safely bounds prosodic expression across syntactic contexts without micro-labeled supervision.
+        </div>
+
+        <div class="section">
+            <h2>1. The Representation Problem</h2>
+            <p>Traditional deep-learning systems optimize audio variance using regression against single ground-truth recordings. This relies on the assumption that a given sentence has exactly one correct pronunciation.</p>
+            <p>However, Prosody operates on a highly subjective one-to-many mapping. The phonetic parameters required to generate a declarative statement versus an emphatic interrogation directly conflict in their vector space. Regressing against these datasets penalizes natural variance, forcing models to infer overly-smooth, robotic, central pitch tendencies.</p>
+        </div>
+
+        <div class="section">
+            <h2>2. Optimization Framework (MDP)</h2>
+            <p>We unfreeze the regression constraint and map standard phonetic adjustments as continuous control policies acting on an underlying state:</p>
+            <ul>
+                <li><strong>State (S_t):</strong> Sequential token encodings containing embedded syntactic limits and positional identifiers.</li>
+                <li><strong>Action (A_t):</strong> A trajectory array encompassing <span class="math">\Delta Pitch</span>, <span class="math">\Delta Duration</span>, and <span class="math">\Delta Energy</span> multiplier vectors at timestep <span class="math">t</span>.</li>
+                <li><strong>Reward (R):</strong> A multi-objective scalar evaluating the trajectory output for structural intelligibility constraints, monotonic variance limits, and target context correlations.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>3. Empirical Constraints and Tradeoffs</h2>
+            <p>Just like actual human physical anatomy, maximizing naturalness variance inherently threatens bounds of intelligibility. Through proxy-simulated Hill-Climbing ablation, we construct a Pareto tradeoff boundary proving that optimal system articulation resides at the explicit intersection of restricted-duration constraints and non-clipping pitch standard-deviations.</p>
+        </div>
+
+        <div class="cta-container">
+            <h2 style="border: none; margin-bottom: 10px;">Interactive System Simulator</h2>
+            <p style="margin-bottom: 30px;">Access the closed-loop optimization dashboard to visualize real-time trajectory updates, override the MDP parameters, and alter the underlying reward equations directly in the browser.</p>
+            <a href="demo.html" class="cta-button">Open Research Workspace &#8594;</a>
+        </div>
+
+    </div>
+
+</body>
+</html>

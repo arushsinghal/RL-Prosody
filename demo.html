@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Prosody Policy Simulation</title>
+    <!-- Chart.js for rendering trajectories -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --panel-bg: #18181b;
+            --panel-border: #27272a;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --radius: 6px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 1. Header */
+        header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-color);
+            flex-shrink: 0;
+        }
+
+        .header-titles h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .header-titles p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.15s ease;
+        }
+
+        .back-link:hover { color: var(--text-primary); }
+
+        /* Layout Grid */
+        .workspace {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        /* 2. Left Panel: Controls */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .panel-section {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin: 0 0 1rem 0;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group:last-child { margin-bottom: 0; }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .label-val { font-family: monospace; color: var(--accent-blue); }
+
+        select, input[type="range"] {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--panel-border);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        /* Input Range Styling Override for Chrome/Safari */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--accent-blue); cursor: pointer; margin-top: -5px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: var(--panel-border); border-radius: 2px; }
+        input[type=range]:focus { outline: none; }
+
+        /* Button */
+        button.primary-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--text-primary);
+            color: var(--bg-color);
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        button.primary-btn:hover { opacity: 0.9; }
+        button.primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Simulated Console / Terminal */
+        .sim-console {
+            background-color: #000;
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            padding: 0.75rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #4ade80;
+            height: 80px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+        .sim-console div { margin-bottom: 2px; }
+
+        /* 3. Right Panel: Visualizations */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .viz-container {
+            flex-grow: 1;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            flex-grow: 1;
+            min-height: 220px;
+            margin-bottom: 1rem;
+        }
+
+        /* 4. Reward Panel */
+        .reward-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr) 1.5fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .reward-card {
+            background: var(--bg-color);
+            border: 1px dashed var(--panel-border);
+            padding: 0.75rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .reward-card.total {
+            border: 1px solid var(--accent-blue);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .rc-label { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem; }
+        .rc-val { font-family: monospace; font-size: 1.1rem; color: var(--text-primary); }
+        .rc-val.warning { color: var(--accent-red); }
+        .rc-val.good { color: var(--accent-green); }
+        .rc-val.total { font-weight: 700; color: var(--accent-blue); font-size: 1.2rem; }
+
+        /* 6. Insight Panel */
+        .insight-panel {
+            background-color: rgba(139, 92, 246, 0.1);
+            border-left: 3px solid var(--accent-purple);
+            padding: 1rem 1.25rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            margin-bottom: 1rem;
+        }
+        .insight-panel h3 { margin: 0 0 0.5rem 0; font-size: 0.75rem; text-transform: uppercase; color: var(--accent-purple); }
+        .insight-panel p { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-titles">
+            <h1>Interactive Prosody Policy Simulation</h1>
+            <p>Explore trajectory-level control in TTS</p>
+        </div>
+        <a href="index.html" class="back-link">
+            &#8592; Back to Research Overview
+        </a>
+    </header>
+
+    <div class="workspace">
+        
+        <!-- LEFT PANEL -->
+        <div class="left-panel">
+            
+            <div class="panel-section">
+                <h2 class="section-title">A. Linguistic Context</h2>
+                <div class="form-group">
+                    <select id="envContext">
+                        <option value="neutral">Neutral Sentence ("The project is going well.")</option>
+                        <option value="emphatic">Emphatic Sentence ("The project is *going* well.")</option>
+                        <option value="question">Question Intonation ("Is the project going well?")</option>
+                        <option value="contrastive">Contrastive Stress ("*The* project is going well.")</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2 class="section-title">B. Policy Controls (Action A_t)</h2>
+                
+                <div class="form-group">
+                    <label><span>Global Pitch Offset</span> <span class="label-val" id="valPitch">0 Hz</span></label>
+                    <input type="range" id="ctrlPitch" min="-30" max="30" value="0" step="1">
+                </div>
+                
+                <div class="form-group">
+                    <label><span>Duration Scaling</span> <span class="label-val" id="valDur">1.0 x</span></label>
+                    <input type="range" id="ctrlDur" min="0.5" max="2.0" value="1.0" step="0.05">
+                </div>
+                
+                <div class="form-group">
+                    <label><span>Energy Scaling</span> <span class="label-val" id="valEnergy">1.0 x</span></label>
+                    <input type="range" id="ctrlEnergy" min="0.5" max="2.0" value="1.0" step="0.05">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2 class="section-title">C. Advanced (Reward Weights)</h2>
+                <div class="form-group">
+                    <label><span>Naturalness ($\lambda_{nat}$)</span> <span class="label-val" id="valWNat">1.0</span></label>
+                    <input type="range" id="wNat" min="0.1" max="5.0" value="1.0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label><span>Intelligibility ($\lambda_{int}$)</span> <span class="label-val" id="valWInt">2.0</span></label>
+                    <input type="range" id="wInt" min="0.1" max="5.0" value="2.0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label><span>Context Align ($\lambda_{ctx}$)</span> <span class="label-val" id="valWCtx">3.0</span></label>
+                    <input type="range" id="wCtx" min="0.1" max="5.0" value="3.0" step="0.1">
+                </div>
+            </div>
+
+            <div class="panel-section" style="border-color: var(--accent-blue);">
+                <h2 class="section-title" style="color: var(--accent-blue);">Policy Update Simulation</h2>
+                <button id="btnRun" class="primary-btn">
+                    Run Policy Optimization
+                </button>
+                <div class="sim-console" id="simConsole">
+                    <div>> Environment initialized.</div>
+                    <div>> MDP Ready. Waiting for manual permutation or optimization call.</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="right-panel">
+            
+            <div class="insight-panel">
+                <h3>Research Insight</h3>
+                <p id="insightText">Modify the linguistic context or prosody actions to observe trajectory alterations. Hit 'Run Optimization' to allow the simulated PPO agent to iteratively seek the maximum reward state based on your custom weightings.</p>
+            </div>
+
+            <div class="viz-container">
+                <h2 class="section-title">Pitch Trajectory (Hz)</h2>
+                <div class="chart-wrapper">
+                    <canvas id="pitchChart"></canvas>
+                </div>
+                
+                <h2 class="section-title" style="margin-top: 1rem;">Duration Allocation Space (Multiplier)</h2>
+                <div class="chart-wrapper" style="min-height: 180px;">
+                    <canvas id="durChart"></canvas>
+                </div>
+
+                <div class="reward-grid">
+                    <div class="reward-card">
+                        <div class="rc-label">Naturalness</div>
+                        <div class="rc-val" id="rNat">0.00</div>
+                    </div>
+                    <div class="reward-card">
+                        <div class="rc-label">Intelligibility</div>
+                        <div class="rc-val" id="rInt">0.00</div>
+                    </div>
+                    <div class="reward-card">
+                        <div class="rc-label">Context Align</div>
+                        <div class="rc-val" id="rCtx">0.00</div>
+                    </div>
+                    <div class="reward-card">
+                        <div class="rc-label">Penalty</div>
+                        <div class="rc-val" id="rMono">0.00</div>
+                    </div>
+                    <div class="reward-card total">
+                        <div class="rc-label" style="color: var(--accent-blue);">Total Reward</div>
+                        <div class="rc-val total" id="rTotal">0.00</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Data Structures
+        const tokens = ["The", "project", "is", "going", "well"];
+        const N = tokens.length;
+        
+        // Contextual Targets
+        const targets = {
+            "neutral": {
+                p: [0, -2, -4, -6, -10],
+                d: [1.0, 1.0, 1.0, 1.0, 1.2],
+                e: [1.0, 1.0, 1.0, 1.0, 0.8]
+            },
+            "emphatic": {
+                p: [0, 0, 0, 15, -5],
+                d: [1.0, 1.0, 1.0, 1.6, 1.0],
+                e: [1.0, 1.0, 1.0, 1.6, 0.9]
+            },
+            "question": {
+                p: [0, 0, 0, 5, 25],
+                d: [1.0, 1.0, 1.0, 1.0, 1.4],
+                e: [1.0, 1.0, 1.0, 1.0, 1.1]
+            },
+            "contrastive": {
+                p: [15, 0, 0, 0, -5],
+                d: [1.5, 1.0, 1.0, 1.0, 1.2],
+                e: [1.5, 1.0, 1.0, 1.0, 0.8]
+            }
+        };
+
+        // State Tracking
+        let currentContext = "neutral";
+        let baseline = JSON.parse(JSON.stringify(targets["neutral"]));
+        let policyP = [...baseline.p];
+        let policyD = [...baseline.d];
+        let isOptimizing = false;
+
+        // Visualizations Config (Chart.js)
+        Chart.defaults.color = '#a1a1aa';
+        Chart.defaults.borderColor = '#27272a';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        const pitchCtx = document.getElementById('pitchChart').getContext('2d');
+        const pitchChart = new Chart(pitchCtx, {
+            type: 'line',
+            data: {
+                labels: tokens,
+                datasets: [
+                    { 
+                        label: 'Baseline', 
+                        data: [...baseline.p], 
+                        borderColor: '#52525b', 
+                        borderDash: [4, 4], 
+                        tension: 0.3,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    },
+                    { 
+                        label: 'Policy Trajectory', 
+                        data: [...policyP], 
+                        borderColor: '#3b82f6', 
+                        backgroundColor: 'rgba(59, 130, 246, 0.15)', 
+                        tension: 0.3, 
+                        fill: true,
+                        pointBackgroundColor: '#09090b',
+                        pointBorderColor: '#3b82f6',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 12, usePointStyle: true } } },
+                scales: { y: { min: -25, max: 35, title: { display: true, text: 'Offset (Hz)', font: { size: 11 } } } }
+            }
+        });
+
+        const durCtx = document.getElementById('durChart').getContext('2d');
+        const durChart = new Chart(durCtx, {
+            type: 'bar',
+            data: {
+                labels: tokens,
+                datasets: [{ 
+                    label: 'Policy Duration Allocation', 
+                    data: [...policyD], 
+                    backgroundColor: '#10b981',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 12, usePointStyle: true } } },
+                scales: { y: { min: 0, max: 2.5, title: { display: true, text: 'Multiplier (x)', font: { size: 11 } } } }
+            }
+        });
+
+        // Compute Engine
+        function logMsg(msg) {
+            const el = document.getElementById('simConsole');
+            el.innerHTML += `<div>> ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function computeReward() {
+            // Get weights
+            let wN = parseFloat(document.getElementById('wNat').value);
+            let wI = parseFloat(document.getElementById('wInt').value);
+            let wC = parseFloat(document.getElementById('wCtx').value);
+
+            let r_nat = 0, r_int = 0, r_ctx = 0, r_mono = 0;
+            let target = targets[currentContext];
+            
+            for (let i = 0; i < N; i++) {
+                // Intelligibility Proxy: Duration bounded optimally near 1.0 (excluding natural phrase-final lengthening)
+                let targetBaselineD = baseline.d[i]; // allow natural elongation based on baseline
+                r_int -= Math.pow((policyD[i] - targetBaselineD), 2) * 2.0;
+                
+                // Context Alignment: Distance to optimal target shape
+                r_ctx -= Math.abs(policyP[i] - target.p[i]) * 0.15;
+                r_ctx -= Math.abs(policyD[i] - target.d[i]) * 1.5;
+                
+                // Naturalness: Penalize jitter (high L1 distance between adjacent nodes)
+                if (i > 0) {
+                    let diff = Math.abs(policyP[i] - policyP[i-1]);
+                    // Acceptable variance is around 5Hz between syllables. High jumps penalized.
+                    if (diff > 10) r_nat -= (diff - 10) * 0.05;
+                }
+            }
+            
+            // Monotonic penalty: Standard Deviation of Pitch
+            let mean = policyP.reduce((a,b)=>a+b,0)/N;
+            let std = Math.sqrt(policyP.reduce((a,b)=>a+Math.pow(b-mean,2),0)/N);
+            if (std < 1.5) r_mono = -5.0; // Robotic collapse
+            
+            // Scaled
+            r_nat *= wN;
+            r_int *= wI;
+            r_ctx *= wC;
+            
+            let total = r_nat + r_int + r_ctx + r_mono;
+            
+            // Update UI Counters
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                el.innerText = val.toFixed(2);
+                el.className = 'rc-val ' + (id==='rTotal'? 'total' : (val < -3.0 ? 'warning' : ''));
+            };
+            
+            setVal('rNat', r_nat);
+            setVal('rInt', r_int);
+            setVal('rCtx', r_ctx);
+            setVal('rMono', r_mono);
+            setVal('rTotal', total);
+
+            // Update Dynamic Insight Panel
+            const insightBox = document.getElementById('insightText');
+            if (r_mono < -2.0) {
+                insightBox.innerHTML = "<span style='color: var(--accent-red);'><strong>Warning (Collapse Detected):</strong> The pitch variance is too low. The resulting audio will sound highly robotic and flat. Try increasing naturalness bounds.</span>";
+            } else if (r_int < -5.0) {
+                insightBox.innerHTML = "<span style='color: var(--accent-red);'><strong>Warning (Intelligibility Loss):</strong> Duration variables have exceeded safe linguistic thresholds. Speech will likely sound slurred or disjointed. Increase Intelligibility weight.</span>";
+            } else {
+                if (currentContext === "question") {
+                    insightBox.innerHTML = "Observe the upward pitch contour mapped to the final token. This demonstrates how explicit context constraints shape declarative boundaries.";
+                } else if (currentContext === "emphatic") {
+                    insightBox.innerHTML = "Duration and pitch delta are algorithmically spiking around the 4th token in response to the *Emphasis* target state.";
+                } else if (currentContext === "contrastive") {
+                    insightBox.innerHTML = "Contrastive stress heavily biases the early tokens, pulling duration and pitch up algorithmically to draw conversational focus.";
+                } else {
+                    insightBox.innerHTML = "System stable. Modify weights or run iterative optimization to test sequence adaptability.";
+                }
+            }
+
+            return total;
+        }
+
+        function updateViz() {
+            pitchChart.data.datasets[1].data = [...policyP];
+            durChart.data.datasets[0].data = [...policyD];
+            pitchChart.update('none');
+            durChart.update('none');
+            computeReward();
+        }
+
+        // Binders: Controls
+        document.getElementById('envContext').addEventListener('change', (e) => {
+            currentContext = e.target.value;
+            // Update baseline visually
+            baseline = JSON.parse(JSON.stringify(targets["neutral"])); // Baseline is always neutral
+            pitchChart.data.datasets[0].data = [...baseline.p];
+            logMsg(`Context updated to [${currentContext}]. MDP State altered.`);
+            
+            // Reset manual sliders
+            document.getElementById('ctrlPitch').value = 0;
+            document.getElementById('ctrlDur').value = 1.0;
+            document.getElementById('valPitch').innerText = "0 Hz";
+            document.getElementById('valDur').innerText = "1.0 x";
+            
+            // Reset policy to baseline to show required adaptation
+            policyP = [...baseline.p];
+            policyD = [...baseline.d];
+            updateViz();
+            pitchChart.update();
+        });
+
+        // Manual Perturbation
+        document.getElementById('ctrlPitch').addEventListener('input', (e) => {
+            if(isOptimizing) return;
+            let val = parseInt(e.target.value);
+            document.getElementById('valPitch').innerText = `${val > 0 ? '+'+val : val} Hz`;
+            policyP = baseline.p.map(x => x + val);
+            updateViz();
+            logMsg(`Manual parameter override: Pitch=${val}Hz.`);
+        });
+        
+        document.getElementById('ctrlDur').addEventListener('input', (e) => {
+            if(isOptimizing) return;
+            let val = parseFloat(e.target.value);
+            document.getElementById('valDur').innerText = `${val.toFixed(2)} x`;
+            policyD = baseline.d.map(x => x * val);
+            updateViz();
+        });
+        
+        // Weight sliders
+        const updateW = (id, valId) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                document.getElementById(valId).innerText = parseFloat(e.target.value).toFixed(1);
+                computeReward();
+            });
+        };
+        updateW('wNat', 'valWNat');
+        updateW('wInt', 'valWInt');
+        updateW('wCtx', 'valWCtx');
+
+        // Optimizer Logic
+        document.getElementById('btnRun').addEventListener('click', async () => {
+            if(isOptimizing) return;
+            isOptimizing = true;
+            const btn = document.getElementById('btnRun');
+            btn.disabled = true;
+            btn.innerText = "Simulating Gradient Updates...";
+            logMsg("Initializing trajectory optimization loop...");
+            
+            let steps = 60;
+            let lr = 0.6;
+            let target = targets[currentContext];
+            
+            for (let i = 0; i <= steps; i++) {
+                
+                for (let w = 0; w < N; w++) {
+                    // Compute gradient logic (distance to ideal parameterized space)
+                    let pDiff = target.p[w] - policyP[w];
+                    let dDiff = target.d[w] - policyD[w];
+                    
+                    // Simulating the stochastic nature of RL exploration (Gaussian-like noise)
+                    let pNoise = (Math.random() - 0.5) * 6.0; 
+                    let dNoise = (Math.random() - 0.5) * 0.25;
+                    
+                    // Allow occasional divergence to demonstrate out-of-bounds evaluation
+                    if (Math.random() < 0.15) { pNoise *= -2.5; dNoise *= -2.5; }
+                    
+                    // Simulated Annealing / diminishing LR
+                    let currentLr = lr * (1 - (i/steps));
+                    
+                    policyP[w] += (pDiff * currentLr * 0.4) + pNoise;
+                    policyD[w] += (dDiff * currentLr * 0.4) + dNoise;
+                    
+                    // Hard constraints
+                    policyD[w] = Math.max(0.2, Math.min(3.0, policyD[w]));
+                }
+                
+                if (i % 5 === 0 || i === steps) {
+                    logMsg(`Optimization Step [${i}/${steps}] executing...`);
+                }
+                
+                updateViz();
+                await new Promise(r => setTimeout(r, 60)); // Animate frame rate
+            }
+            
+            logMsg("Terminal state reached. Convergence satisfied.");
+            isOptimizing = false;
+            btn.disabled = false;
+            btn.innerText = "Run Policy Optimization";
+        });
+
+        // Initialize Call
+        updateViz();
+
+    </script>
+</body>
+</html>
